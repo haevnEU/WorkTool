@@ -1,0 +1,75 @@
+services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: dev.Dockerfile
+    ports:
+      - "81:80"
+      - "444:443"
+      - "8081:8081"  # for nginx status
+      - "8443:8443"  # for nginx status over TLS
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - work_tool_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dev.Dockerfile
+    ports:
+      - "8080:8080"
+      - "9876:9876"
+    volumes:
+      - ./data:/data:rw
+      - ./backend/src:/app/src:rw
+      - ./.trigger-file:/app/.trigger-file
+    depends_on:
+      - mongo
+      - postgres
+    networks:
+      - work_tool_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dev.Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app     # bind mount source so edits are visible in container
+      - /app/node_modules   # avoid overwriting container node_modules on Windows
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # helps file watch on Docker for Windows / WSL2
+      - CHOKIDAR_INTERVAL=100
+    restart: unless-stopped
+    networks:
+      - work_tool_network
+
+  mongo:
+    image: mongo:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/db/mongo:/data/db:rw
+      - ./data/db/config/mongo:/data/configdb:rw
+    networks:
+      - work_tool_network
+
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dev_board
+    volumes:
+      - ./data/db/postgres:/var/lib/postgresql:rw
+    networks:
+      - work_tool_network
+
+networks:
+  work_tool_network:
+    driver: bridge

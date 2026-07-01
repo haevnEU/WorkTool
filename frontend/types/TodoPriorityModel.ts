@@ -1,0 +1,1 @@
+export type TodoPriority = 'low' | 'medium' | 'high' | undefined;

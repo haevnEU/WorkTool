@@ -1,0 +1,5 @@
+{
+  "name": "Internal Ops Dashboard",
+  "description": "A comprehensive internal dashboard for managing snippets, notes, weekly meetings, and electronic delivery notes (eLS). Features theme switching, user profiles, and global search.",
+  "requestFramePermissions": []
+}

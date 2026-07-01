@@ -1,0 +1,99 @@
+# nginx.conf - updated for HTTPS (self-signed) and WebSocket proxying
+user nginx;
+worker_processes auto;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    tcp_nopush      on;
+    keepalive_timeout  65;
+
+    # websocket map (must be in http context)
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    # Security / TLS tuning
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # HTTP -> HTTPS redirect
+    server {
+        listen 80;
+        server_name localhost;
+        return 301 https://$host$request_uri;
+    }
+
+    # HTTPS server (uses self-signed cert)
+    server {
+        listen 443 ssl http2 default_server;
+        server_name localhost;
+
+        ssl_certificate     /etc/ssl/certs/selfsigned.crt;
+        ssl_certificate_key /etc/ssl/private/selfsigned.key;
+
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_prefer_server_ciphers on;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+        # Increase body size for uploads if needed
+        client_max_body_size 2048M;
+
+        # Backend API
+        location /api/ {
+            proxy_pass http://backend:8080/api/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_connect_timeout 10s;
+            proxy_read_timeout 90s;
+
+            if ($request_method = 'OPTIONS') {
+                add_header Access-Control-Allow-Origin $http_origin;
+                add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
+                add_header Access-Control-Allow-Headers $http_access_control_request_headers;
+                add_header Access-Control-Allow-Credentials 'true';
+                add_header Content-Length 0;
+                add_header Content-Type text/plain;
+                return 204;
+            }
+        }
+
+        # Frontend dev server + WebSocket (HMR)
+        location / {
+            proxy_pass http://frontend:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 120s;
+            proxy_buffering off;
+        }
+
+        # Optionally serve static files if present in the image
+        location /static/ {
+            root /usr/fileShare/nginx/html;
+            try_files $uri =404;
+        }
+    }
+}

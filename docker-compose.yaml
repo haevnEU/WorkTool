@@ -1,0 +1,62 @@
+services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "81:80"
+      - "444:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - work_tool_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dev.Dockerfile
+    volumes:
+      - ./data:/data:rw
+      - ./backend/src:/app/src:rw
+      - ./.trigger-file:/app/.trigger-file
+    depends_on:
+      - mongo
+      - postgres
+    networks:
+      - work_tool_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - work_tool_network
+
+  mongo:
+    image: mongo:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/db/mongo:/data/db:rw
+      - ./data/db/config/mongo:/data/configdb:rw
+    networks:
+      - work_tool_network
+
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dev_board
+    volumes:
+      - ./data/db/postgres:/var/lib/postgresql:rw
+    networks:
+      - work_tool_network
+
+networks:
+  work_tool_network:
+    driver: bridge

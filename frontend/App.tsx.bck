@@ -1,0 +1,53 @@
+import React from 'react';
+import {HashRouter, Navigate, Route, Routes} from 'react-router-dom';
+import {ThemeProvider} from './contexts/ThemeContext';
+import {ToastProvider} from './contexts/ToastContext';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Snippets from './pages/Snippets';
+import Notes from './pages/Notes';
+import WeeklyMeeting from './pages/WeeklyMeeting';
+import ElsErstellung from './pages/ElsErstellung';
+import Settings from './pages/Settings';
+import Ticketsystem from './pages/Ticketsystem';
+import DatabaseSearch from './pages/DatabaseSearch';
+import SharePage from './pages/SharePage';
+import FileUploadPage from "@/pages/FileUploadPage.tsx";
+import {UserProvider} from "@/contexts/UserContext.tsx";
+import RulePage from "@/pages/RulePage.tsx";
+import {BackendCheckProvider} from "@/contexts/BackendCheck.tsx";
+import FacilityOverviewPage from "@/wmt/pages/FacilityOverviewPage.tsx";
+import SMJobPage from "@/wmt/pages/SMJobPage.tsx";
+
+function App() {
+    return (
+        <ThemeProvider>
+            <ToastProvider>
+                <BackendCheckProvider>
+                    <UserProvider>
+                        <HashRouter>
+                            <Layout>
+                                <Routes>
+                                    <Route path="/" element={<Navigate to="/home" replace/>}/>
+                                    <Route path="/home" element={<Home/>}/>
+                                    <Route path="/snippets" element={<Snippets/>}/>
+                                    <Route path="/notes" element={<Notes/>}/>
+                                    <Route path="/weekly-meeting" element={<WeeklyMeeting/>}/>
+                                    <Route path="/els-erstellung" element={<ElsErstellung/>}/>
+                                    <Route path="/ticketsystem" element={<Ticketsystem/>}/>
+                                    <Route path="/database-search" element={<DatabaseSearch/>}/>
+                                    <Route path="/upload" element={<FileUploadPage/>}/>
+                                    <Route path="/settings" element={<Settings/>}/>
+                                    <Route path="/share/:id" element={<SharePage/>}/>
+                                    <Route path="/rule" element={<RulePage/>}/>
+                                </Routes>
+                            </Layout>
+                        </HashRouter>
+                    </UserProvider>
+                </BackendCheckProvider>
+            </ToastProvider>
+        </ThemeProvider>
+    );
+}
+
+export default App;

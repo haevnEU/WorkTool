@@ -1,0 +1,5 @@
+spring:
+  config:
+    import:
+      - "optional:file:/data/config/secure.yaml"
+      - "file:/data/config/application.yaml"
